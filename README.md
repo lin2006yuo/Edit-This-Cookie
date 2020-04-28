@@ -1,8 +1,8 @@
 # cookies-edit-extension
-
+## For gm shop project base on vue
 ## Project setup
 ```
-yarn install
+yarn install 
 ```
 
 ### Compiles and hot-reloads for development
