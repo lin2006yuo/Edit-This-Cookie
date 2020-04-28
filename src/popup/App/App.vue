@@ -2,8 +2,8 @@
   <div class="main_app">
     <div class="c-panel">
       <div>
-        <h2>Filter</h2>
-        <input v-model="filter" />
+        <h2 class='c-title'>Filter</h2>
+        <Input v-model="filter" />
       </div>
       <div
         class="c-cookie-item"
@@ -12,38 +12,38 @@
       >
         <input type="text" v-model="cookie.name" />
         <input type="text" v-model="cookie.value" />
-        <button @click="handleEdit(cookie.name, cookie.value)">修改</button>
-        <button @click="handleDelete(cookie.name)">删除</button>
-        <!-- <button>复制</button> -->
+        <Button @click="handleEdit(cookie.name, cookie.value)">修改</Button>
+        <Button @click="handleDelete(cookie.name)">删除</Button>
+        <!-- <Button>复制</Button> -->
       </div>
     </div>
     <div class="c-panel">
-      <h2>预设</h2>
+      <h2 class='c-title'>预设</h2>
       <div class="c-cookie-item">
-        <span>cms_key</span>
+        <span class="c-text">cms_key</span>
         <select v-model="preCmsKey">
           <option disabled>请选择</option>
           <option>qcg</option>
           <option>miaotest</option>
           <option>ddmc</option>
         </select>
-        <button @click="handleEdit('cms_key', preCmsKey)">
+        <Button @click="handleEdit('cms_key', preCmsKey)">
           修改
-        </button>
+        </Button>
       </div>
       <div class="c-cookie-item">
-        <span>cshop_cms_key</span>
+        <span class="c-text">cshop_cms_key</span>
         <select v-model="preCshopCmsKey">
           <option disabled>请选择</option>
           <option>gmxls</option>
         </select>
-        <button @click="handleEdit('cshop_cms_key', preCshopCmsKey)">
+        <Button @click="handleEdit('cshop_cms_key', preCshopCmsKey)">
           修改
-        </button>
+        </Button>
       </div>
     </div>
     <div class="c-panel">
-      <h2>追踪</h2>
+      <h2 class='c-title'>追踪</h2>
       <div v-for="(cookies, index) in traceCookiesGroup" :key="index">
         <h4>{{ cookies.url }}</h4>
         <div class="c-cookie-item">
@@ -54,7 +54,7 @@
               <span>{{ cookie.value }}</span>
             </div>
           </div>
-          <button>替换</button>
+          <Button @click="handleReplace(cookies.cookies)">替换</Button>
         </div>
       </div>
     </div>
@@ -62,8 +62,10 @@
 </template>
 
 <script>
+import qs from "query-string"
 import { filterByKeys } from "./util"
-import qs from 'query-string'
+import Input from "../../components/input"
+import Button from '../../components/button'
 
 const GM_COOKIES_KEY = ["cms_key", "sessionid", "group"]
 export default {
@@ -80,7 +82,7 @@ export default {
       preCshopCmsKey: "",
       // 追踪
       traceTabs: [],
-      traceCookiesGroup: [{}] // [{ url, cookies: [{ name, value }] }]
+      traceCookiesGroup: [{}], // [{ url, cookies: [{ name, value }] }]
     }
   },
   computed: {
@@ -90,7 +92,7 @@ export default {
         return filterByKeys(sortCookies, GM_COOKIES_KEY).sort()
       }
       return sortCookies
-    }
+    },
   },
   mounted() {
     const { chrome } = window
@@ -120,7 +122,7 @@ export default {
         .filter((tab) => !!tab.url.match(/localhost|shop.guanmai/))
         .map((tab) => ({
           id: tab.id,
-          url: tab.url
+          url: tab.url,
         }))
       this.traceTabs = traceTabs
 
@@ -128,7 +130,7 @@ export default {
       traceTabs.forEach((tab) => {
         chrome.cookies.getAll(
           {
-            url: tab.url
+            url: tab.url,
           },
           (cookies) => {
             const traceCookies = filterByKeys(cookies, GM_COOKIES_KEY)
@@ -143,7 +145,7 @@ export default {
     chrome.tabs.query(
       {
         active: true,
-        currentWindow: true
+        currentWindow: true,
       },
       (tabs) => {
         const currentTabURL = tabs[0].url
@@ -152,7 +154,7 @@ export default {
         this.currentTabURL = currentTabURL
         chrome.cookies.getAll(
           {
-            url: currentTabURL
+            url: currentTabURL,
           },
           (cookies) => {
             // domain: "www.huya.com"
@@ -179,7 +181,7 @@ export default {
         url: this.currentTabURL,
         path: "/",
         name,
-        value
+        value,
       })
       this.handleDelete("sessionid")
     },
@@ -187,7 +189,7 @@ export default {
       const { chrome } = window
       chrome.cookies.remove({
         url: this.currentTabURL,
-        name
+        name,
       })
       this.handleReload()
     },
@@ -195,10 +197,24 @@ export default {
       const { chrome } = window
       const { url } = qs.parseUrl(this.currentTabURL)
       chrome.tabs.update({
-        url: url
+        url: url,
       })
-    }
-  }
+    },
+    handleReplace(cookies) {
+      const { chrome } = window
+      for (const cookie of cookies) {
+        chrome.cookies.set({
+          url: this.currentTabURL,
+          name: cookie.name,
+          value: cookie.value,
+        })
+      }
+      this.handleReload()
+    },
+  },
+  components: {
+    Input,Button
+  },
 }
 </script>
 
