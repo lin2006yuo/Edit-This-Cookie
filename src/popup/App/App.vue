@@ -12,8 +12,8 @@
       >
         <input type="text" v-model="cookie.name" />
         <input type="text" v-model="cookie.value" />
-        <button @click="handleEdit(cookie, index)">修改</button>
-        <button @click="handleDelete(cookie, cookie.name)">删除</button>
+        <button @click="handleEdit(cookie.name, cookie.value)">修改</button>
+        <button @click="handleDelete(cookie.name)">删除</button>
         <!-- <button>复制</button> -->
       </div>
     </div>
@@ -27,11 +27,7 @@
           <option>miaotest</option>
           <option>ddmc</option>
         </select>
-        <button
-          @click="
-            handleEdit(cookie, null, { name: 'cms_key', value: preCmsKey })
-          "
-        >
+        <button @click="handleEdit('cms_key', preCmsKey)">
           修改
         </button>
       </div>
@@ -41,14 +37,7 @@
           <option disabled>请选择</option>
           <option>gmxls</option>
         </select>
-        <button
-          @click="
-            handleEdit(cookie, null, {
-              name: 'cshop_cms_key',
-              value: preCshopCmsKey
-            })
-          "
-        >
+        <button @click="handleEdit('cshop_cms_key', preCshopCmsKey)">
           修改
         </button>
       </div>
@@ -74,6 +63,7 @@
 
 <script>
 import { filterByKeys } from "./util"
+import qs from 'query-string'
 
 const GM_COOKIES_KEY = ["cms_key", "sessionid", "group"]
 export default {
@@ -95,10 +85,11 @@ export default {
   },
   computed: {
     filterCookies() {
+      const sortCookies = this.cookies
       if (this.filter === "gm") {
-        return filterByKeys(this.cookies, GM_COOKIES_KEY)
+        return filterByKeys(sortCookies, GM_COOKIES_KEY).sort()
       }
-      return this.cookies
+      return sortCookies
     }
   },
   mounted() {
@@ -164,7 +155,6 @@ export default {
             url: currentTabURL
           },
           (cookies) => {
-            console.log(cookies)
             // domain: "www.huya.com"
             // expirationDate: 1588345525
             // hostOnly: true
@@ -183,24 +173,17 @@ export default {
     )
   },
   methods: {
-    handleEdit(cookie, index, options = {}) {
-      let name, value
-      if (index) {
-        name = cookie.name
-        value = this.filterCookies[index].value
-      } else {
-        name = options.name
-        value = options.value
-      }
+    handleEdit(name, value) {
       const { chrome } = window
       chrome.cookies.set({
         url: this.currentTabURL,
+        path: "/",
         name,
         value
       })
-      this.handleDelete(cookie, "sessionid")
+      this.handleDelete("sessionid")
     },
-    handleDelete(cookie, name) {
+    handleDelete(name) {
       const { chrome } = window
       chrome.cookies.remove({
         url: this.currentTabURL,
@@ -210,7 +193,10 @@ export default {
     },
     handleReload() {
       const { chrome } = window
-      chrome.tabs.reload(this.currentTabId)
+      const { url } = qs.parseUrl(this.currentTabURL)
+      chrome.tabs.update({
+        url: url
+      })
     }
   }
 }
