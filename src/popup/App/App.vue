@@ -2,57 +2,51 @@
   <div class="main_app">
     <div class="c-panel">
       <div>
-        <h2 class='c-title'>Filter</h2>
+        <h2 class="c-title">Filter</h2>
         <Input v-model="filter" />
       </div>
-      <div
-        class="c-cookie-item"
-        v-for="(cookie, index) in filterCookies"
-        :key="index"
+      <h2 class="c-title">当前</h2>
+      <pannel-item
+        v-for="cookie in filterCookies"
+        :key="cookie.name"
+        :name="cookie.name"
       >
-        <input type="text" v-model="cookie.name" />
-        <input type="text" v-model="cookie.value" />
-        <Button @click="handleEdit(cookie.name, cookie.value)">修改</Button>
-        <Button @click="handleDelete(cookie.name)">删除</Button>
-        <!-- <Button>复制</Button> -->
-      </div>
+        <template #content>
+          <Select
+            :value="cookie.value"
+            @input="handleSelect(cookie, $event)"
+            :options="cookie.options"
+          />
+        </template>
+        <template #action>
+          <Button @click="handleEdit(cookie.name, cookie.value)">
+            修改
+          </Button>
+          <Button @click="handleDelete(cookie.name)">删除</Button>
+        </template>
+      </pannel-item>
     </div>
     <div class="c-panel">
-      <h2 class='c-title'>预设</h2>
-      <div class="c-cookie-item">
-        <span class="c-text">cms_key</span>
-        <select v-model="preCmsKey">
-          <option disabled>请选择</option>
-          <option>qcg</option>
-          <option>miaotest</option>
-          <option>ddmc</option>
-        </select>
-        <Button @click="handleEdit('cms_key', preCmsKey)">
-          修改
-        </Button>
-      </div>
-      <div class="c-cookie-item">
-        <span class="c-text">cshop_cms_key</span>
-        <select v-model="preCshopCmsKey">
-          <option disabled>请选择</option>
-          <option>gmxls</option>
-        </select>
-        <Button @click="handleEdit('cshop_cms_key', preCshopCmsKey)">
-          修改
-        </Button>
-      </div>
-    </div>
-    <div class="c-panel">
-      <h2 class='c-title'>追踪</h2>
+      <h2 class="c-title">追踪</h2>
       <div v-for="(cookies, index) in traceCookiesGroup" :key="index">
         <h4>{{ cookies.url }}</h4>
+
         <div class="c-cookie-item">
           <div>
-            <div v-for="(cookie, i) in cookies.cookies" :key="'cookie_' + i">
-              <span>{{ cookie.name }}</span
-              >：
-              <span>{{ cookie.value }}</span>
-            </div>
+            <pannel-item
+              v-for="(cookie, index) in cookies.cookies"
+              :key="index"
+              :name="cookie.name"
+            >
+              <template #content>
+                <span :class="{
+                  'c-cms_key': cookie.name === 'cms_key',
+                  'c-cshop-cms_key': cookie.name === 'cshop_cms_key'
+                }">
+                   {{ cookie.value }}
+                </span>
+              </template>
+            </pannel-item>
           </div>
           <Button @click="handleReplace(cookies.cookies)">替换</Button>
         </div>
@@ -63,11 +57,13 @@
 
 <script>
 import qs from "query-string"
-import { filterByKeys } from "./util"
+import { filterByKeys, getOptions } from "./util"
 import Input from "../../components/input"
-import Button from '../../components/button'
+import Button from "../../components/button"
+import Select from "../../components/select"
+import PannelItem from "../../components/pannel-item"
 
-const GM_COOKIES_KEY = ["cms_key", "sessionid", "group"]
+const GM_COOKIES_KEY = ["cms_key", "cshop_cms_key", "sessionid", "group_id"]
 export default {
   name: "app",
   data() {
@@ -89,9 +85,18 @@ export default {
     filterCookies() {
       const sortCookies = this.cookies
       if (this.filter === "gm") {
-        return filterByKeys(sortCookies, GM_COOKIES_KEY).sort()
+        const a = filterByKeys(sortCookies, GM_COOKIES_KEY)
+          .sort((a, b) => a.name - b.name)
+          .map((item) => ({
+            ...item,
+            options: getOptions(item),
+          }))
+        return a
       }
-      return sortCookies
+      return sortCookies.map((item) => ({
+        ...item,
+        options: getOptions(item),
+      }))
     },
   },
   mounted() {
@@ -175,6 +180,13 @@ export default {
     )
   },
   methods: {
+    handleSelect(cookie, value) {
+      const targetCookie = this.cookies.find((c) => c.name === cookie.name)
+      if (!targetCookie) {
+        return this.cookies.push({ name: cookie.name, value: value })
+      }
+      targetCookie.value = value
+    },
     handleEdit(name, value) {
       const { chrome } = window
       chrome.cookies.set({
@@ -196,6 +208,7 @@ export default {
     handleReload() {
       const { chrome } = window
       const { url } = qs.parseUrl(this.currentTabURL)
+      location.reload(true)
       chrome.tabs.update({
         url: url,
       })
@@ -213,7 +226,10 @@ export default {
     },
   },
   components: {
-    Input,Button
+    Input,
+    Button,
+    Select,
+    PannelItem,
   },
 }
 </script>
@@ -227,5 +243,15 @@ export default {
 }
 .c-cookie-item {
   display: flex;
+}
+.c-cms_key {
+  color: #4caf50;
+  font-size: 20px;
+  font-weight: bold;
+}
+.c-cshop-cms_key {
+  color: #ff9800;
+  font-size: 20px;
+  font-weight: bold;
 }
 </style>
